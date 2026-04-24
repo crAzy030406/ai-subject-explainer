@@ -1,0 +1,118 @@
+AI SUBJECT EXPLAINER - PROJECT REPORT
+
+1. ABSTRACT
+Personalized education often requires significant human effort to adapt complex concepts to individual student comprehension levels. This project introduces the "AI Subject Explainer," an automated, scalable system that utilizes Large Language Models (LLMs) to provide customized academic explanations. The architecture relies on a Google Forms interface where users input a specific subject, their academic proficiency (School to Postgraduate), and the desired explanation format. Upon submission, a Google Apps Script acts as the middleware, extracting the data and dynamically engineering a structured prompt. This prompt is transmitted via the OpenRouter API to an LLM, enforcing strict constraints on language complexity, jargon, and formatting. The generated content is parsed and injected into a custom HTML email template, which is immediately dispatched to the user. The resulting system successfully demonstrates the integration of everyday productivity tools with cutting-edge AI APIs to create an accessible, zero-friction personalized learning environment.
+
+2. INTRODUCTION
+In the age of information, students have access to vast amounts of data, yet they often struggle to find explanations tailored to their specific level of understanding. A middle school student requires a very different explanation of "Quantum Mechanics" than a university physics major. The AI Subject Explainer addresses this problem by acting as an automated, on-demand tutor. By combining the ubiquity of Google Forms and Email with the power of Generative AI, this project provides a seamless interface for users to request and receive highly customized educational content without needing to interact with complex AI chat interfaces or write detailed prompts themselves.
+
+3. OBJECTIVE
+- To develop an automated system capable of generating level-appropriate educational explanations on demand.
+- To eliminate the need for users to write complex AI prompts by using a structured form interface.
+- To utilize a serverless architecture (Google Apps Script) to process requests and deliver results efficiently via email.
+- To provide responses in a clean, readable, and visually appealing format using HTML/CSS email templates.
+
+4. TOOLS AND TECHNIQUES USED
+- Frontend/Input Interface: Google Forms
+- Database/Storage: Google Sheets
+- Backend Environment: Google Apps Script (JavaScript)
+- Artificial Intelligence: OpenRouter API (using openai/gpt-oss-120b:free model)
+- Output/Delivery Mechanism: Google MailApp Service
+- Templating: HTML & CSS for structured email design
+
+5. METHODOLOGY
+The system operates on an event-driven, serverless architecture:
+1. User Input: The user fills out a Google Form, providing their email address, the topic they want explained, their academic level, and the type of explanation they prefer (e.g., Simple, Detailed, Example-Based).
+2. Trigger Activation: Upon form submission, the data is saved to a Google Sheet, which triggers an 'onFormSubmit' event in the attached Google Apps Script.
+3. Data Extraction & Validation: The script reads the submitted row, extracts the variables, and validates that no essential fields are empty.
+4. Prompt Engineering: The script maps the user's selected 'level' and 'help type' to predefined instructional strings, combining them with the topic to build a highly specific prompt for the AI.
+5. API Request: The script makes an HTTP POST request to the OpenRouter API, passing the generated prompt and system instructions.
+6. Response Handling: The script receives the JSON response from the API, extracts the HTML-formatted text, and handles any potential API errors or safety blockages.
+7. Email Assembly & Dispatch: The generated text is wrapped in a branded HTML/CSS email template and sent to the user's provided email address using the Google MailApp service.
+
+6. ALGORITHM
+Step 1: Start.
+Step 2: Listen for Google Form submission event.
+Step 3: Read values: Timestamp, Topic, Level, HelpType, Email.
+Step 4: Check if any value is missing. If yes, log error and exit.
+Step 5: Define 'LevelInstructions' based on 'Level' (School, Under Grad, Post Grad).
+Step 6: Define 'HelpInstructions' based on 'HelpType' (Simple, Detailed, Example).
+Step 7: Construct API Prompt combining Topic, LevelInstructions, HelpInstructions, and formatting rules.
+Step 8: Send HTTP POST request with Prompt and API Key to OpenRouter API.
+Step 9: Receive response from API.
+Step 10: If response contains error, format an error message string.
+Step 11: Else, extract the generated text from the response JSON.
+Step 12: Insert the extracted text into the HTML Email Template structure.
+Step 13: Send the HTML Email to the user's Email address.
+Step 14: Log success message.
+Step 15: End.
+
+7. PSEUDOCODE
+FUNCTION sendExplanation(event)
+    email = event.values[4]
+    topic = event.values[1]
+    level = event.values[2]
+    helpType = event.values[3]
+
+    IF email OR topic OR level OR helpType is empty THEN
+        RETURN
+    END IF
+
+    prompt = buildPrompt(topic, level, helpType)
+    explanation = callOpenRouterAPI(prompt)
+    htmlEmail = buildHtmlEmail(topic, level, helpType, explanation)
+
+    MailApp.sendEmail(email, "Your Explanation", htmlEmail)
+END FUNCTION
+
+FUNCTION buildPrompt(topic, level, helpType)
+    levelRule = getRuleForLevel(level)
+    helpRule = getRuleForHelpType(helpType)
+    
+    promptString = "Topic: " + topic + "\n" +
+                   "Level: " + levelRule + "\n" +
+                   "Type: " + helpRule + "\n" +
+                   "Respond strictly in HTML tags."
+    RETURN promptString
+END FUNCTION
+
+FUNCTION callOpenRouterAPI(prompt)
+    headers = { "Authorization": "Bearer API_KEY" }
+    payload = { "model": "openai/gpt-oss-120b:free", "messages": [{"role": "user", "content": prompt}] }
+    
+    TRY
+        response = HTTP.post("https://openrouter.ai/api/v1/chat/completions", headers, payload)
+        json = parse(response)
+        RETURN json.choices[0].message.content
+    CATCH error
+        RETURN "Error generating explanation."
+    END TRY
+END FUNCTION
+
+8. ADVANTAGE
+- Asynchronous Delivery: Users don't have to wait on a loading screen; the explanation is delivered to their inbox.
+- High Personalization: Explanations are tailored to exact academic levels rather than providing generic definitions.
+- Serverless & Zero-Cost Hosting: Utilizes Google's infrastructure (Apps Script) which is free, and free-tier AI models, eliminating hosting and server maintenance costs.
+- Extremely User-Friendly: Filling out a form is simpler for the general public than interacting with and prompting a chatbot interface.
+
+9. FEATURES
+- Dynamic Prompt Engineering: Abstracts the complexity of prompt writing away from the user.
+- Multi-Tiered Explanations: Supports School, Undergraduate, and Postgraduate complexity levels.
+- Format Options: Can generate simple overviews, detailed breakdowns, or example-based learning.
+- Rich Text Delivery: Uses HTML formatting (headings, bold text, bullet points) inside custom-styled emails for excellent readability.
+- Error Handling: Gracefully handles API timeouts or errors by emailing the user a notification rather than failing silently.
+
+10. LIMITATIONS
+- No Conversational Context: Since it operates via email based on a form submission, users cannot ask follow-up questions or clarify doubts on the same topic seamlessly.
+- Quota Restrictions: Dependent on Google Workspace email sending limits (typically 100-500 per day for consumer accounts) and OpenRouter rate limits.
+- Potential Hallucinations: Like all LLMs, the AI may occasionally generate inaccurate information, requiring users to verify critical facts.
+- No Attachments: Cannot currently generate or attach explanatory diagrams, charts, or images.
+
+11. FUTURE SCOPE
+- Email Threading for Follow-ups: Modifying the script to listen to email replies, allowing users to reply to the explanation email to ask follow-up questions.
+- Image Generation: Integrating DALL-E or Midjourney APIs to generate and attach relevant diagrams based on the topic.
+- Multi-Language Support: Adding a language selection dropdown to the form to generate explanations in regional languages.
+- Cross-Platform Integration: Expanding the delivery mechanism to send explanations via WhatsApp or Telegram bots instead of just email.
+
+12. CONCLUSION
+The AI Subject Explainer successfully demonstrates a highly practical application of Generative AI in the educational sector. By utilizing existing, familiar infrastructure like Google Forms and Email, it drastically lowers the barrier to entry for users seeking personalized tutoring. The project abstracts away the complexities of AI prompt engineering, ensuring that anyone, regardless of technical proficiency, can receive high-quality, customized, and level-appropriate explanations on demand. As AI models continue to improve in speed and accuracy, automated micro-learning systems like this one represent the future of accessible, self-paced education.
